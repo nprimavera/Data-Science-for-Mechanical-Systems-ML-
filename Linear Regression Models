@@ -1,0 +1,204 @@
+from typing import List 
+from typing import Tuple
+from typing import Union
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import statsmodels.formula.api as smf
+import statsmodels.api as sm
+
+from sklearn.linear_model import LinearRegression
+from scipy.stats import binom
+from scipy.stats import norm
+from scipy.stats import ttest_ind
+from tqdm import tqdm
+
+sns.set(font_scale=1.5)
+sns.set_style("whitegrid", {'grid.linestyle':'--'})
+
+#import the data
+data = pd.read_csv("https://raw.githubusercontent.com/changyaochen/MECE4520/master/data/simple_linear_regression.csv")
+
+#create header row
+col_Names=["X", "Y"]
+data = pd.read_csv("https://raw.githubusercontent.com/changyaochen/MECE4520/master/data/simple_linear_regression.csv",names=col_Names)
+data #output the table 
+
+#simple linear regression
+
+#define data
+
+X = np.append(np.ones(shape=(data.shape[0], 1)), data[["X"]].values, axis=1)
+Y = np.append(np.ones(shape=(data.shape[0], 1)), data[["Y"]].values, axis=1)
+
+print(X.shape)
+print(Y.shape)
+
+#calculate point estimates (coefficients) - much quicker than the previous way
+
+betas = np.linalg.inv(X.T @ X) @ X.T @ Y
+beta0 = betas[0,1]
+beta1 = betas[1,1]
+
+print(f"Beta_0 is {beta0}")
+print(f"Beta_1 is {beta1}")
+
+#calculate the standard errors
+
+Y_hat = X @ betas
+residual = Y - Y_hat
+var = np.var(residual, ddof = X.shape[0])
+
+se = np.sqrt(var * np.linalg.inv(X.T @ X))
+
+SE_beta_0 = se[0,0]
+SE_beta_1 = se[1,1]
+
+print(f"The standard error for beta_0 is: {SE_beta_0:5.4f}")
+print(f"The standard error for beta_1 is: {SE_beta_1:5.4f}")
+
+#calculate R2
+
+r2 = np.power(Y_hat - np.mean(Y), 2).sum() / np.power(Y - np.mean(Y), 2).sum()
+
+print(f"The value of R squared is {r2}")
+
+#Plot the data using the 'statsmodels' library
+model_1 = smf.ols(formula='Y ~ X', data=data)
+result_1 = model_1.fit()
+print(result_1.summary())
+
+#calculate the confidence interval for a new x value of 10 and the predicted y
+
+x_new = 10
+var = np.var(residual, ddof=X.shape[0])
+multiplier = 1.96   # multiplier = t.ppf(q=0.975, df=X.shape[0] - X.shape[1])
+
+y_hat_new = (beta0 + beta1 * x_new)
+print(f"For a new x value of {x_new}, the predicted y value is {y_hat_new}")
+
+delta = np.sqrt(var) * np.sqrt(1 / X.shape[0] + (x_new - np.mean(X[:, 1]))**2 / np.sum((X[:, 1] - np.mean(X[:, 1]))**2))  
+
+print(f"The lower bound of the 95% CI is: {y_hat_new - multiplier * delta:5.3f}")
+print(f"The upper bound of the 95% CI is: {y_hat_new + multiplier * delta:5.3f}")
+
+#calculate if the result is "significant" - equivalently, does the (95%) confidence interval of Beta_1 include zero 
+CI_lower = y_hat_new - multiplier * delta
+CI_higher = y_hat_new + multiplier * delta
+
+def confidence_interval(number, intervals):
+    for interval in intervals:
+        if interval[0] <= number <= interval[1]:
+            return True
+    return False 
+
+intervals = [(CI_lower, CI_higher)]
+number = 0  
+
+if confidence_interval(number, intervals):
+    print("The result is significant")
+else: 
+    print("The result is not significant")
+
+#calculate the prediction interval (PI)
+delta = np.sqrt(var) * np.sqrt(1 + 1 / X.shape[0] + (x_new - np.mean(X[:, 1]))**2 / np.sum((X[:, 1] - np.mean(X[:, 1]))**2))  
+
+print(f"The lower bound of the 95% PI is: {y_hat_new - multiplier * delta:5.3f}")
+print(f"The upper bound of the 95% PI is: {y_hat_new + multiplier * delta:5.3f}")
+
+#multiple linear regression
+
+#import the data
+data = pd.read_csv("https://raw.githubusercontent.com/changyaochen/MECE4520/master/data/simple_linear_regression.csv")
+
+col_Names=["X", "Y", "X_squared"]
+data = pd.read_csv("https://raw.githubusercontent.com/changyaochen/MECE4520/master/data/simple_linear_regression.csv",names=col_Names)
+data
+
+#add X_squared to the data set
+df = pd.DataFrame(data)
+
+df['X_squared'] = df['X'] ** 2
+
+print(df)
+
+X = data[["X", "X_squared"]].values
+X = np.append(np.ones((X.shape[0], 1)), X, axis=1)
+print(X.shape)
+
+#calculate the point estimates 
+betas_2 = np.linalg.inv(X.T @ X) @ X.T @ Y
+
+beta0_2 = betas_2[0,1]
+beta1_2 = betas_2[1,1]
+beta2_2 = betas_2[2,1]
+
+print(f"Beta_0 is {beta0_2}")
+print(f"Beta_1 is {beta1_2}")
+print(f"Beta_2 is {beta2_2}")
+
+#calculate the standard errors
+Y_hat_2 = X @ betas_2
+residual_2 = Y - Y_hat_2
+var_2 = np.var(residual_2, ddof=X.shape[0])
+
+se = np.sqrt(var * np.linalg.inv(X.T @ X))
+
+SE_beta_0 = se[0,0]
+SE_beta_1 = se[1,1]
+SE_beta_2 = se[2,2]
+
+print(f"The standard error for beta_0 is: {SE_beta_0:5.4f}")
+print(f"The standard error for beta_1 is: {SE_beta_1:5.4f}")
+print(f"The standard error for beta_2 is: {SE_beta_2:5.4f}")
+
+#calculate R2
+r2_2 = np.power(Y_hat_2 - np.mean(Y), 2).sum() / np.power(Y - np.mean(Y), 2).sum()
+
+print(f"The value of R squared is {r2_2}")
+
+#Plot the data using the 'statsmodels' library
+model_2 = smf.ols(formula = 'Y ~ X + X_squared', data=data)
+result_2 = model_2.fit()
+print(result_2.summary())
+
+#calculate if the result is "significant" - equivalently, does the (95%) confidence interval of Beta_1 include zero 
+CI_lower = 14.961
+CI_higher = 17.726
+#from the table - these are the values of the confidence interval for Beta_1
+
+def confidence_interval(number, intervals):
+    for interval in intervals:
+        if interval[0] <= number <= interval[1]:
+            return True
+    return False 
+
+intervals = [(CI_lower, CI_higher)]
+number = 0  
+
+if confidence_interval(number, intervals):
+    print("The result is significant")
+else: 
+    print("The result is not significant")
+
+#Problem 3 - prove that maximizing the likelihood leads to minimizing the mean squared error
+
+#this should be true since the "best" coefficients are the ones that maximize the likelihood of the data
+#minimizing the mean squared error occurs when the point estimates of beta_0 and beta_1 maximize the likelihood
+#minimizing the mean squared error = maximizing the likelihood - when the errors are normally distributed 
+
+#random data - can mix up the numbers for different results 
+
+np.random.seed(5)
+x_3 = np.random.rand(100)
+error_3 = np.random.normal(7, 13, size = 100) #linear data sample 
+y_3 = 2 * x_3 + 1 + error_3
+
+X_3 = sm.add_constant(x_3) #add number from within the parameters 
+
+model_3 = sm.OLS(y_3, X_3)
+result_3 = model_3.fit()
+
+print(result_3.summary())
