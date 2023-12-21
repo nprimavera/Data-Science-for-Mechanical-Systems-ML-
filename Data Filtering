@@ -1,0 +1,57 @@
+import requests 
+url = (
+    "https://raw.githubusercontent.com/changyaochen/MECE4520/"
+    "master/data/random_numbers.txt"
+)
+response = requests.get(url) 
+values = [int(x.strip()) for x in response.text.split("\n") if len(x) > 0]
+
+data_sheet = values       # define the values as the data sheet - data is also equal to these two 
+desired_sum = 5000        # define the desired sum 
+
+def find_pairs(data,desired_sum):  # define the find_pairs function as well as the data & desired sum
+    pairs = 0                      # initialize the count 
+    
+    numbers_seen = set()           # create a set that will keep track of the numbers seen during iteration 
+    
+    for num in data:                     # begin iteration 
+        difference = desired_sum - num    # calculate the difference between the target sum and the current number
+        if difference in numbers_seen:   # if the difference is a seen number, match the two 
+            pairs += 1                   # increment the pair count
+        numbers_seen.add(num)            # add the current number to the set of seen numbers 
+    return pairs                         # return the number of pairs that sum to the target 
+
+answer = find_pairs(data_sheet, desired_sum)   # define the answer to the problem as the function
+print(f"There are {answer} pairs that sum to {desired_sum} in the data sheet") # print the answer 
+
+import pandas as pd
+import matplotlib.pyplot as plt
+data = pd.read_csv("https://raw.githubusercontent.com/changyaochen/MECE4520/master/data/iris.csv")
+
+data.head      # used class notes as a guide 
+data.shape
+
+data["Species"].value_counts()  # should give you information on all
+
+data.groupby("Species")["PetalLengthCm"].mean() # average petal length - need max & min of iris-versicolor 
+
+# Need to narrow the data down to the Petal Length of Iris-versicolor (Species --> iris-versicolor --> petal length)
+iv_data = data[data["Species"] == "Iris-versicolor"]  # brings us into data --> species --> iris-versicolor data
+
+iv_max = iv_data["PetalLengthCm"].max()   # assign a variable to the max petal length within iv_data
+iv_min = iv_data["PetalLengthCm"].min()   # assign a variable to the min petal length withing iv_data
+
+print(f"The maximum PetalLengthCm for iris-versicolor is {iv_max}") # print the answer
+print(f"The minimum PetalLengthCm for iris-versicolor is {iv_min}") # print the answer 
+
+data.groupby("Species")["SepalWidthCm"].mean() # answer to the second part of problem 2 - Iris-versicolor  
+
+average_sepal_width_cm_data = data.groupby("Species")["SepalWidthCm"].mean() # assign a variable to the data 
+minimum_value = average_sepal_width_cm_data[0]  # assign the minimum value variable to the data
+
+for value in average_sepal_width_cm_data:       # begin iteration 
+    if value < minimum_value:                   # look for the lowest average 
+        minimum_value = value                   # assign the lowest average a variable 
+
+print(f"Among the three species, the smallest average SepalWidthCM is {minimum_value} ")  # print answer 
+print(f"Iris-versicolor has the smallest average at {minimum_value}")  # print answer 
