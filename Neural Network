@@ -1,0 +1,228 @@
+# HW6 - creating a Neural Network
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
+from typing import Tuple
+from tensorflow import keras
+from tensorflow.keras import layers
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+data = pd.read_csv(
+    "https://raw.githubusercontent.com/changyaochen/MECE4520/master/"
+    "data/breast_cancer.csv")
+data
+
+# encode the diagnosis = M as 1, and diagnosis = B as 0 - treat as a binary outcome (dependent variable)
+data["label"] = data["diagnosis"].apply(lambda x: 0 if x == "B" else 1)
+
+# use 3 features - namely smoothness_mean, texture_mean, and perimeter_mean - to build a Neural Network (NN)
+
+# define a list of features that will be used to train the NN
+features = [
+    # "radius_mean",
+    "texture_mean",
+    "perimeter_mean",
+    # "area_mean",
+    "smoothness_mean",
+    # "compactness_mean",
+    # "concavity_mean",
+    # "concave_mean",
+    # "symmetry_mean",
+    # "fractal_mean",
+]
+
+# the target variable for the classification task is specified as "label"
+label = "label"
+
+# train_test_split - function splits the data into training and testing sets
+# 'X_raw' = features & 'Y' = labels for training
+X_raw, X_raw_test, Y, Y_test = train_test_split(
+    data[features].values, data[label].values, test_size=0.2, random_state=42
+)
+
+# standardize the input using StandardScalar function - ensures each feature has a mean of 0 & standard deviation of 1
+# input features = 'X_raw' & 'X_raw_test'
+scaler = StandardScaler()
+scaler.fit(X_raw)
+X = scaler.transform(X_raw)             # standardization
+X_test = scaler.transform(X_raw_test)   # standardization
+
+# formatting - reshape labels 'Y' & 'Y_test' to have a single column
+Y = Y.reshape((-1, 1))
+Y_test = Y_test.reshape((-1, 1))
+
+# need one hidden layer together with the final layer(output layer)
+# hidden layer - 5 neurons (units) and use ReLU as the activation function
+# final layer - 1 neuron (unit) and use the sigmoid function as the activations
+
+# building the neural network
+model = tf.keras.Sequential([                                                       # creates a linear stack of layers
+    tf.keras.layers.Dense(5, activation='relu', input_shape=(len(features),)),      # (input) hidden layer
+    tf.keras.layers.Dense(1, activation='sigmoid')                                  # (output) final layer
+])
+
+# compile the model - sets the model up for training
+model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])   # adam - optimization algorithm used for training neural networks
+                                                                                    # loss function for binary classification problems
+                                                                                    # display the accuracy of the model throughout the training
+
+# train the model - trains the model on the input data (X) with corresponding labels (Y)
+model.fit(X, Y, epochs=50, batch_size=32, validation_data=(X_test, Y_test))         # model will iterate 50 times over the entire training dataset
+                                                                                    # model will use 32 samples in each iteration to update the model's weights
+                                                                                    # validation_data uses the provided test data to evaluate the model after each epoch/iteration
+
+# how many parameters are there in this NN?
+# formula to calculate parameters in a dense layer:  Number of Parameters = (Input Size(=len(features)) + 1) × Number of Units (= 5)
+# calculate the number of parameters for each layer, then add together to get total number number of parameters for the whole neural network
+
+features      # features to use
+
+len(features) # value corresponding to len(features)
+
+# count the number of parameters in each layer
+def count_parameters(layer):
+    return layer.count_params()
+
+# calculate and print the number of parameters for each layer
+for i, layer in enumerate(model.layers):
+    print(f"Parameters in Layer {i+1}: {count_parameters(layer)}")
+
+# calculate and print the total number of parameters in the model
+total_parameters = sum(count_parameters(layer) for layer in model.layers)
+print(f"Total Parameters: {total_parameters}")
+
+# calculating parameters using professor's github example - check above
+
+# number of units/neurons in each layer
+layer1 = 5
+layer2 = 1
+
+# input size - the length of the features
+input_size = len(features)
+
+# given weight and bias matrices
+W_1_init = np.random.normal(size=(input_size, layer1))
+b_1_init = np.random.normal(size=(1, layer1))
+W_2_init = np.random.normal(size=(layer1, layer2))
+b_2_init = np.random.normal(size=(1, layer2))
+
+# calculate the number of parameters for each layer
+layer1_parameters = np.prod(W_1_init.shape) + np.prod(b_1_init.shape)
+layer2_parameters = np.prod(W_2_init.shape) + np.prod(b_2_init.shape)
+
+# total number of parameters for the whole NN
+total_parameters = layer1_parameters + layer2_parameters
+
+# Print the results
+print(f"Parameters in Layer 1: {layer1_parameters}")
+print(f"Parameters in Layer 2: {layer2_parameters}")
+print(f"Total Parameters: {total_parameters}")
+
+# print the given weight and bias matrices for clarification
+print("Initial Weight and Bias Matrices: \n")
+print(f"\nWight matrix for the First (input/hidden) Layer is:\n {W_1_init}")
+print(f"\nShape of W_1_init is: {W_1_init.shape}")
+print(f"\n\nBias matrix for the First (input/hidden) Layer is:\n {b_1_init}")
+print(f"\nShape of b_1_init is: {b_1_init.shape}")
+print(f"\n\nWeight matrix for the Second (output/final) Layer is:\n {W_2_init}")
+print(f"\nShape of W_2_init is: {W_2_init.shape}")
+print(f"\n\nBias matrix for the Second (output/final) Layer is:\n {b_2_init}")
+print(f"\nShape of b_2_init is: {b_2_init.shape}")
+
+W_1_init = np.ones((input_size, layer1))
+b_1_init = 0.1 * np.ones((1, layer1))
+W_2_init = np.ones((layer1, layer2))
+b_2_init = 0.1 * np.ones((1, layer2))
+
+# both matrices W_1 and W_2 are filled w/ the value 1, and B_1 and B_2 are filled w/ the value 0.1 - notation is in the lecture slides
+# given matrices and values
+W_1 = W_1_init
+W_2 = W_2_init
+b_1 = b_1_init
+b_2 = b_2_init
+# transpose each matrix - following notation from slides
+W_1_T = np.transpose(W_1)
+W_2_T = np.transpose(W_2)
+b_1_T = np.transpose(b_1)
+b_2_T = np.transpose(b_2)
+
+# print
+print("Final Matrices:")
+
+print(f"\nW_1 is:\n {W_1}")
+print(f"\nb_1 is:\n {b_1}")
+print(f"\nW_2 is:\n {W_2}")
+print(f"\nb_2 is:\n {b_2}")
+print("\nShape of each matrix before being transposed: ")
+print(f"Shape of W_1 is {W_1.shape}")
+print(f"Shape of b_1 is {b_1.shape}")
+print(f"Shape of W_2 is {W_2.shape}")
+print(f"Shape of b_2 is {b_2.shape}")
+
+print("\n\nTransposed Matrices: ")
+print(f"\nW_1_T is:\n {W_1_T}")
+print(f"\nb_1_T is:\n {b_1_T}")
+print(f"\nW_2_T is:\n {W_2_T}")
+print(f"\nb_2_T is:\n {b_2_T}")
+print("\nShape of each matrix after its transposed: ")
+print(f"Shape of W_1_T is {W_1_T.shape}")
+print(f"Shape of b_1_T is {b_1_T.shape}")
+print(f"Shape of W_2_T is {W_2_T.shape}")
+print(f"Shape of b_2_T is {b_2_T.shape}")
+
+# input data --> input features are X
+X = np.random.rand(5, 3)  # data with 5 neurons/units and 3 features
+
+# standardize input - for each feature subtract the mean and divide by standard deviation before the forward propogation
+mean_X = np.mean(X, axis=0)
+std_X = np.std(X, axis=0)
+X_standardized = (X - mean_X) / std_X
+
+# one forward propagation
+hidden_layer_output = np.dot(X_standardized, W_1_init) + b_1_init     # output of the first/hidden layer
+hidden_layer_activation = np.maximum(0, hidden_layer_output)          # applies ReLU activation function to the output of the first/hidden layer - negative values replaced w/ 0
+output_layer = np.dot(hidden_layer_activation, W_2_init) + b_2_init   # output of the final layer
+output = 1 / (1 + np.exp(-output_layer))                              # applies Sigmoid activation function to the output of the final layer - converting values to probabilities b/w 0 and 1
+
+# calculate the average prediction for the entire dataset
+average_prediction = np.mean(output)
+
+# Print the result
+print(f"\nAverage Prediction after one forward propagation: {average_prediction}")
+
+# use logloss as the error metric
+# what is the value of this error metric after one forward propogation
+# note: logloss is taken as the average over all n samples
+
+# the logloss (aka, cross-entropy) measures how close the prediction results to the probability interpretation
+# a perfect model has a logloss of 0
+# logloss = - 1/n(sum((y_i(ln(p_i))) + (1 - y_i)ln(1 - p_1)))
+        # n = number of samples
+        # y_i = true label of the ith sample
+        # p_i = predicted probability of the ith sample being in class 1
+
+data
+
+# encode the diagnosis = M as 1, and diagnosis = B as 0 - treat as a binary outcome (dependent variable)
+data["label"] = data["diagnosis"].apply(lambda x: 0 if x == "B" else 1)
+data.shape
+
+# need to align the arrays
+y = np.array(y).flatten()
+output = np.array(output).flatten()
+
+# calculate logloss
+# logloss formula = - 1/n(sum((y_i(ln(p_i))) + (1 - y_i)ln(1 - p_1)))
+def compute_logloss(y_true, y_pred):
+  epsilon = 1e-15
+  y_pred = np.clip(y_pred, epsilon, 1 - epsilon)
+  return - np.mean(y_true * np.log(y_pred) + (1 - y_true) * np.log(1 - y_pred))
+
+logloss = compute_logloss(y, output)
+
+# print
+print(f"The logloss after one forward propogation is: {logloss}")
