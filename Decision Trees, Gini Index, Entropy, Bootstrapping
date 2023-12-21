@@ -1,0 +1,282 @@
+# Decision Trees - a decision tree is a flowchart-like structure in which each internal node represents a "test" on an attribute (e.g., whether a car's horsepower is larger than 200), each branch represents the outcome of the test, and each leaf node represents an outcome (decision taken after computing all attributes). The paths from root to leaf represent classification rules.
+
+%matplotlib inline 
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+from sklearn.linear_model import LogisticRegression
+from tqdm import tqdm
+from urllib.error import URLError
+
+sns.set(font_scale=1.5)
+sns.set_style("whitegrid", {'grid.linestyle':'--'})
+
+# import the breast cancer dataset 
+cancer = pd.read_csv("https://raw.githubusercontent.com/changyaochen/MECE4520/master/data/breast_cancer.csv")
+cancer["label"] = cancer["diagnosis"].apply(lambda x: 0 if x == "B" else 1)     # creates a new column "label" in the data frame - 0 = benign tumors ("B") and 1 = malignant tumors ("M")
+cancer
+
+# Problem 1 - binary classification 
+
+# what is the value of the gini index for the full dataset 
+
+cancer["label"] = cancer["diagnosis"].apply(lambda x: 0 if x == "B" else 1) # 0 if benign, 1 if malignant 
+
+def calculate_gini_index(labels):       # labels is based off the the diagnosis column 
+    total_samples = len(labels)         # total amount of diagnosis 
+    if total_samples == 0:              # if all samples are benign (label of 0)
+        return 0                        # return 0 if all samples are benign (0)
+    
+    class_1_probability = labels.sum() / total_samples    # ratio of malignant samples (label of 1) to total samples = probability of malignant samples 
+    class_0_probability = 1 - class_1_probability         # probability of benign samples (label of 0) = 1 - probability of malignant samples 
+        
+    gini_index = 1 - (class_1_probability ** 2 + class_0_probability ** 2)     # calculate the gini index 
+    return gini_index                                                          # return gini index 
+
+gini_index_cancer = calculate_gini_index(cancer["label"])
+print("The Gini Index for the entire Breast Cancer Dataset is", gini_index_cancer)
+
+# use gini index as the loss metric, split the feature of concave_extreme, what is the value of the cut point
+
+# import the different features 
+from sklearn import tree
+
+dt_model = tree.DecisionTreeClassifier(
+    criterion = "gini",
+    max_depth = 1,
+)
+features = [
+    #"radius_mean",
+    #"texture_mean",
+    #"perimeter_mean",
+    #"area_mean",
+    #"smoothness_mean",
+    #"compactness_mean",
+    #"concavity_mean",
+    #"concave_mean",
+    #"symmetry_mean",
+    #"fractal_mean",
+    #"radius_se",
+    #"texture_se",
+    #"perimeter_se",
+    #"area_se",
+    #"smoothness_se",
+    #"compactness_se",
+    #"concavity_se",
+    #"concave_se",
+    #"symmetry_se",
+    #"fractal_se",
+    #"radius_extreme",
+    #"texture_extreme",
+    #"perimeter_extreme",
+    #"area_extreme",
+    #"smoothness_extreme",
+    #"compactness_extreme",
+    #"concavity_extreme",
+    "concave_extreme",              # want the concave_extreme feature 
+    #"symmetry_extreme",
+    #"fractal_extreme",
+]
+
+label = "label"
+dt_model.fit(X = cancer[features], y = cancer[label])
+
+import graphviz    # creating decision tree graphic - from professor's github
+
+dot_data = tree.export_graphviz(     # use graphviz library to create the decision tree graphic 
+    decision_tree = dt_model,        # model for decision tree - block above 
+    out_file = None, 
+    feature_names = features,        # which features to use - block above dictates 
+    class_names = ["0", "1"],        # benign or malignant 
+    filled = True, 
+    rounded = True,  
+    special_characters = True,
+    max_depth = 1,
+)  
+
+graph = graphviz.Source(dot_data)    # define the graph 
+graph.render("cancer_tree")
+graph                                # print the graph 
+
+# 0 = benign = True
+# 1 = malignant = False 
+
+# find the value of the cutpoint using general code for cutpoint - use again when solving with entropy (swap entropy for gini index)
+def calculate_best_split(data, feature_name):       # define the best split point function 
+    unique_values = data[feature_name].unique()     # unique values of specified feature 
+    best_gini_index = float('inf')                  # best gini index - initialized to positive infinity 
+    best_cut_point = None                           # best cut point - initialized to none 
+
+    for value in unique_values:                             # begins iteration through each unique value 
+        left_subset = data[data[feature_name] <= value]     # subset of the data that is less than or equal to the current value
+        right_subset = data[data[feature_name] > value]     # subset of the data that is greater than the current value 
+
+        gini_left = calculate_gini_index(left_subset["label"])       # calculate left gini index - check with graph 
+        gini_right = calculate_gini_index(right_subset["label"])     # calculate right gini index - check with graph 
+
+        total_samples = len(data)                           # number of total breast cancer samples 
+        weight_left = len(left_subset) / total_samples      # weight of the left subset based on the total number of samples
+        weight_right = len(right_subset) / total_samples    # weight of the right subset based on the total number of samples 
+
+        gini_index_split = weight_left * gini_left + weight_right * gini_right     # calculates the gini index for the split
+
+        if gini_index_split < best_gini_index:      # check if current split has a lower gini index than the best at that point     
+            best_gini_index = gini_index_split      # if true, set a new best gini index and cutpoint
+            best_cut_point = value                  # best cut point equals the value corresponding to the best gini index
+
+    return best_cut_point                           # return the best cut point 
+
+# apply it to concave_extreme
+data = cancer 
+feature_name = "concave_extreme"
+best_cut_point = calculate_best_split(data, feature_name)
+print(f"The best value of the cut point when using gini index as the loss function is {best_cut_point}")
+
+# with this cut point, how many samples are in each of the two resulting partitions 
+graph     # note samples section on the cut point 
+
+# repeat these steps using entropy instead of gini index 
+
+# what is the value of entropy for the full dataset 
+
+cancer["label"] = cancer["diagnosis"].apply(lambda x: 0 if x == "B" else 1)
+
+def calculate_entropy(labels):          # labels is based off the the diagnosis column # define the entropy function
+    total_samples = len(labels)         # total amount of diagnosis/samples
+    if total_samples == 0:              # if all samples are benign (label of 0)
+        return 0                        # return 0 if all samples are benign 
+    
+    class_1_probability = labels.sum() / total_samples    # ratio of malignant samples (label of 1) to total samples = probability of malignant samples 
+    class_0_probability = 1 - class_1_probability         # probability of benign samples (label of 0) = 1 - probability of malignant samples 
+        
+    entropy = - (class_1_probability * np.log2(class_1_probability + 1e-10) + class_0_probability * np.log2(class_0_probability + 1e-10))     # calculate the entropy
+    return entropy                                                                                                                            # return the entropy 
+
+entropy_cancer = calculate_entropy(cancer["label"])
+print("The Entropy for the entire Breast Cancer Dataset is", entropy_cancer)
+
+# use entropy as the loss metric, split the feature of concave_extreme, what is the value of the cut point
+
+# import the different features 
+from sklearn import tree
+
+dt_model = tree.DecisionTreeClassifier(
+    criterion = "entropy",
+    max_depth = 1,
+)
+features = [
+    #"radius_mean",
+    #"texture_mean",
+    #"perimeter_mean",
+    #"area_mean",
+    #"smoothness_mean",
+    #"compactness_mean",
+    #"concavity_mean",
+    #"concave_mean",
+    #"symmetry_mean",
+    #"fractal_mean",
+    #"radius_se",
+    #"texture_se",
+    #"perimeter_se",
+    #"area_se",
+    #"smoothness_se",
+    #"compactness_se",
+    #"concavity_se",
+    #"concave_se",
+    #"symmetry_se",
+    #"fractal_se",
+    #"radius_extreme",
+    #"texture_extreme",
+    #"perimeter_extreme",
+    #"area_extreme",
+    #"smoothness_extreme",
+    #"compactness_extreme",
+    #"concavity_extreme",
+    "concave_extreme",              # want the concave_extreme feature 
+    #"symmetry_extreme",
+    #"fractal_extreme",
+]
+
+label = "label"
+dt_model.fit(X = cancer[features], y = cancer[label])
+
+import graphviz    # creating decision tree graphic - from professor's github
+
+dot_data = tree.export_graphviz(     # use graphviz library to create the decision tree graphic 
+    decision_tree = dt_model,        # model for decision tree - block above 
+    out_file = None, 
+    feature_names = features,        # which features to use - block above dictates 
+    class_names = ["0", "1"],        # benign or malignant 
+    filled = True, 
+    rounded = True,  
+    special_characters = True,
+    max_depth = 1,
+)  
+
+graph = graphviz.Source(dot_data)    # define the graph 
+graph.render("cancer_tree")
+graph                                # print the graph 
+
+# 0 = benign = True
+# 1 = malignant = False 
+
+# find the value of the cutpoint using general code for cutpoint - replace gini with entropy
+def calculate_best_split(data, feature_name):       # define the best split point function 
+    unique_values = data[feature_name].unique()     # unique values of specified feature (in this case concave extreme)
+    best_entropy = float('inf')                     # best entropy - initialized to positive infinity 
+    best_cut_point = None                           # best cut point - initialized to none 
+
+    for value in unique_values:                             # begins iteration through each unique value 
+        left_subset = data[data[feature_name] <= value]     # subset of the data that is less than or equal to the current value
+        right_subset = data[data[feature_name] > value]     # subset of the data that is greater than the current value 
+
+        entropy_left = calculate_entropy(left_subset["label"])       # calculate left entropy - check with graph 
+        entropy_right = calculate_entropy(right_subset["label"])     # calculate right entropy - check with graph 
+
+        total_samples = len(data)                           # number of total samples/diagnosis 
+        weight_left = len(left_subset) / total_samples      # weight of the left subset based on the total number of samples
+        weight_right = len(right_subset) / total_samples    # weight of the right subset based on the total number of samples 
+
+        entropy_split = weight_left * entropy_left + weight_right * entropy_right     # calculates the entropy for the split
+
+        if entropy_split < best_entropy:            # check if current split has a lower entropy than the best at that point     
+            best_entropy = entropy_split            # if true, set a new best entropy and cutpoint
+            best_cut_point = value                  # best cut point equals the value corresponding to the best entropy
+
+    return best_cut_point                           # return the best cut point 
+
+# apply it to concave_extreme
+data = cancer 
+feature_name = "concave_extreme"
+best_cut_point = calculate_best_split(data, feature_name)
+print(f"The best value of the cut point when using entropy as the loss function is {best_cut_point}")
+
+# with this cut point, how many samples are in each of the two resulting partitions 
+graph
+
+Problem 2 - bootstrap sample - obtain a bootstrap sample from a set of n observations
+
+Bootstraping is a resampling technique used to estimate the distribution of a statistic (like the mean or variance) by repeatedly resampling with replacement from the data set. It's a powerful tool used in inferential statistics and is particularly useful when the sample size is small or when the underlying distribution of the data is unknown or complex.
+
+What is the probability that the first bootstrap observation is not the j-th observation from the original sample?
+
+    probability = 1 - 1/n 
+    
+    this is the probability of not selecting the j-th observation
+What is the probability that the j-th observation is not in the full bootstrap sample?
+
+probability = (1 - 1/n)**b 
+
+this is the probability 
+When n = 10000, what is the numerical value of the probability mentioned in section 2?
+
+n = 10000
+probability = (1 - 1/n)**b    
+
+probability = p = (1 - 1/10000)**b
+p = (0.9999)**b
+p = 0.9999               
