@@ -1,0 +1,78 @@
+import numpy as np
+
+from PIL import Image
+from urllib.request import urlopen
+
+image_data = Image.open(urlopen("https://raw.githubusercontent.com/changyaochen/MECE4520/master/data/columbia_university.png"))
+X = np.array(image_data)
+
+import matplotlib.pyplot as plt
+
+plt.figure()
+plt.imshow(image_data, cmap="gray")
+# plt.imshow(image_data, cmap="gray") 
+# can also use - plt.show()
+
+# find the value of the element at index (128,128), that is X[128,128]
+
+X = np.array(image_data)
+value = X[128,128]
+print(f"The value of the element at index (128, 128) is: {value}")
+
+# perform standardization on matrix X to create a new matrix, Xscaled, what is the value of the element Xscaled[128, 128]?
+# standardizatoion: for each column in matrix X, subtract its mean and divide by its standard deviation to create a new column, Xscaled
+
+mean_values = np.mean(X, axis = 0)
+standard_deviation_values = np.std(X, axis = 0)
+
+# avoid division by 0 -> replace zero standard deviations with 1
+standard_deviation_values[standard_deviation_values ==0] = 1
+
+# standardize each column in matrix X
+Xscaled = (X - mean_values) / standard_deviation_values
+
+# acess the element at index (128,128) in the new, standardized matrix
+scaled_value = Xscaled[128,128]
+
+print(f"The value of the element Xscaled[128, 128] is: {scaled_value}")
+
+# perform PCA (Principal Component Analysis) on this matrix Xscaled -> what is the value of the first element of the first principal component?
+
+from sklearn.decomposition import PCA
+
+# create a PCA object 
+pca = PCA()
+
+# fit the PCA model to the standardized matrix Xscaled
+pca.fit(Xscaled)
+
+# access the first principle component
+first_principle_component = pca.components_[0]
+
+# obtain the value of the first element of the first principal component
+first_element = first_principle_component[0]
+
+print(f"The value of the first element of the first principal component is: {first_element}")
+
+X[128,128]
+
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+X_scaled[128,128]
+
+# perform SVD
+n = len(X_scaled)
+U, S, Vh = np.linalg.svd(X_scaled.T @ X_scaled / n)
+Vh[0,0]
+
+# calculate reconstruction error
+U_reduced = U[:, :50]
+Z = X_scaled @ U_reduced
+X_approx = Z @ U_reduced.T
+error = (
+    np.sum(np.square(np.linalg.norm((X_scaled - X_approx), ord=2, axis=1))) 
+    / np.sum(np.square(np.linalg.norm(X_scaled, ord=2, axis=1)))
+)
+error
