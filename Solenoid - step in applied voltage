@@ -1,0 +1,33 @@
+# Assuming that the equivalent circuit for the solenoid is simply an inductor and resistor in series, apply a step in the applied voltage 
+
+import numpy as np
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+# Define the RL circuit parameters
+R = 10  # Resistance (ohms)
+L = 20  # Inductance (henries)
+
+# Define the differential equation for the RL circuit
+def rl_circuit(y, t):
+    i, = y
+    di_dt = (-R/L) * i  # Differential equation for RL circuit
+    return [di_dt]
+
+# Initial condition
+i0 = 0
+
+# Time points
+t = np.linspace(0, 2, 100)  # Adjust the time range as needed
+
+# Simulate the RL circuit response to a step change in voltage
+sol = odeint(rl_circuit, [i0], t)
+
+# Plot the results
+plt.plot(t, sol[:, 0], label='Current (A)')
+plt.title('RL Circuit Step Response')
+plt.xlabel('Time (s)')
+plt.ylabel('Current (A)')
+plt.legend()
+plt.grid(True)
+plt.show()
